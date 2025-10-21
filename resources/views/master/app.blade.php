@@ -12,7 +12,7 @@
   <body>
     @include('layouts.header')
 
-    <div class="container py-4">
+    <div class="container-fluid">
       @yield('content')
     </div>
 

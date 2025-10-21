@@ -6,6 +6,7 @@ use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,7 +20,7 @@ class DatabaseSeeder extends Seeder
             'last_name' => 'istrator',
             'role' => 'admin',
             'email' => 'admin@msc.de',
-            'password' => 'secret',
+            'password' => Hash::make('secret')
         ]);
     }
 }

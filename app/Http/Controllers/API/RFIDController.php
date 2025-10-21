@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\User;
+use App\Models\WorkBreak;
 use App\Models\WorkLog;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
@@ -42,33 +43,39 @@ class RFIDController extends Controller
         ]);
     }
 
-    public function scan(Request $request) {
-        $request->validate([
-            'rfid_uid' => 'required|string',
-        ]); 
+public function scan(Request $request) {
+    $request->validate([
+        'rfid_uid' => 'required|string',
+    ]); 
 
-        $user = User::where('rfid_uid', $request->rfid_uid)->first();
-        
-        if(!$user) {
-            return response()->json(['message' => 'RFID not recognized.'], 404);
-        }
-
-        $lastLog = WorkLog::where('user_id', $user->id)
-            ->latest()
-            ->first();
-
-        if(!$lastLog || $lastLog->clock_out) {
-            return $this->handleClockAction($user, 'clock_in');
-        }
-
-        $ongoingBreak = $lastLog->breaks()->whereNull('end_time')->first();
-        
-        if($ongoingBreak){
-            return $this->handleBreakEnd($user);
-        } else {
-            return $this->handleBreakStart($user);
-        }
+    $user = User::where('rfid_uid', $request->rfid_uid)->first();
+    
+    if(!$user) {
+        return response()->json(['message' => 'RFID not recognized.'], 404);
     }
+
+    $lastLog = WorkLog::where('user_id', $user->id)
+        ->latest()
+        ->first();
+
+    if(!$lastLog || $lastLog->clock_out) {
+        return $this->handleClockAction($user, 'clock_in');
+    }
+
+    $ongoingBreak = $lastLog->workBreak()->whereNull('end_time')->first();
+
+    if($ongoingBreak) {
+        return $this->handleBreakEnd($user);
+    }
+
+    $breaksCount = $lastLog->workBreak()->count();
+
+    if($breaksCount === 0) {
+        return $this->handleBreakStart($user);
+    } else {
+        return $this->handleClockAction($user, 'clock_out');
+    }
+}
 
     protected function handleClockAction(User $user ,$type) {
         if($type === 'clock_in'){
@@ -111,7 +118,7 @@ class RFIDController extends Controller
             return response()->json(['message' => 'No active work log found. Please clock in first.'], 400);
         }
 
-        $break = $currentLog->break()->create([
+        $break = $currentLog->WorkBreak()->create([
             'start_time' => now(),
         ]);
 
@@ -124,7 +131,7 @@ class RFIDController extends Controller
             ->latest()
             ->first();
 
-        $ongoingBreak = $currentLog->breaks()
+        $ongoingBreak = $currentLog->workBreak()
             ->whereNull('end_time')
             ->first();
 

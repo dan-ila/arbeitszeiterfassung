@@ -24,4 +24,8 @@ class WorkLog extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function workBreak(){
+        return $this->hasMany(WorkBreak::class);
+    }
 }
