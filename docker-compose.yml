@@ -1,0 +1,34 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/apache/Dockerfile
+    container_name: laravel_web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - mysql
+    networks:
+      - laravel
+
+  mysql:
+    image: mysql:8.0
+    container_name: laravel_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - laravel
+
+networks:
+  laravel:
+
+volumes:
+  mysql_data:
