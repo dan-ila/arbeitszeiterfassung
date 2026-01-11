@@ -1,13 +1,14 @@
-<footer class="mt-auto" style="background-color: #005461; color: #F4F4F4;">
-    <div class="container">
-        <div class="row mt-2 mb-2">
-                <small>&copy; {{ date('Y') }} MSC. All rights reserved.</small>
+<footer class="mt-auto bg-secondary text-white">
+    <div class="container py-2">
+        <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-1">
+            <small class="opacity-75 d-flex align-items-center gap-2">
+                <i class="fa fa-building-o" aria-hidden="true"></i>
+                <span>&copy; {{ date('Y') }} MSC. Alle Rechte vorbehalten.</span>
+            </small>
+            <small class="opacity-75 d-flex align-items-center gap-2">
+                <i class="fa fa-code" aria-hidden="true"></i>
+                <span>Version 0.0.1</span>
+            </small>
         </div>
     </div>
 </footer>
-
-<style>
-    footer a:hover {
-        color: #00B7B5 !important;
-    }
-</style>

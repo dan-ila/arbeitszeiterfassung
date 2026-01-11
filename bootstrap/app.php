@@ -3,6 +3,7 @@
 use App\Http\Middleware\CheckSession;
 use App\Http\Middleware\EnsureTwoFactorIsVerified;
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\EnsureUserCanAccessRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prepend(EnsureFrontendRequestsAreStateful::class);
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
+            'requests' => EnsureUserCanAccessRequests::class,
             '2fa'   => EnsureTwoFactorIsVerified::class,
         ]);
     })

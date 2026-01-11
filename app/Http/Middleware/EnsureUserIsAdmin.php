@@ -16,8 +16,11 @@ class EnsureUserIsAdmin
      */
     public function handle(Request $request, Closure $next): Response{
         $user = Auth::user();
-        if($user && !$user->isAdmin()){
+        if (!$user) {
             return redirect('/login');
+        }
+        if (!$user->isAdmin()) {
+            return redirect()->route('users.dashboard')->with('error', 'Keine Berechtigung.');
         }
         return $next($request);
     }   

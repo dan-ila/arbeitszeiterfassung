@@ -50,6 +50,7 @@ class RFIDController extends Controller
             $log = WorkLog::create([
                 'user_id' => $user->id,
                 'clock_in' => now(),
+                'source' => 'terminal',
             ]);
 
             $this->logAction($user->id, 'clock_in', 'User clocked in via RFID.');

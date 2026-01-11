@@ -18,13 +18,31 @@ class UserManagementController extends Controller
 {
     use LogActivity;
 
-    public function index()
+    public function index(Request $request)
     {
-        // Fetch all users, newest first
-        $users = \App\Models\User::orderBy('id', 'desc')->get();
+        $search = trim((string) $request->query('search', ''));
+        $role = $request->query('role');
+
+        $usersQuery = User::query()->orderByDesc('id');
+
+        if ($search !== '') {
+            $usersQuery->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if (in_array($role, ['admin', 'manager', 'user'], true)) {
+            $usersQuery->where('role', $role);
+        } else {
+            $role = null;
+        }
+
+        $users = $usersQuery->paginate(25)->withQueryString();
 
         // Pass users to the index view
-        return view('admins.userManagement.index', compact('users'));
+        return view('admins.userManagement.index', compact('users', 'search', 'role'));
     }
 
     public function create()
@@ -38,7 +56,7 @@ class UserManagementController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
             'email'      => 'required|email|unique:users,email',
-            'role'       => 'nullable|in:admin', // checkbox
+            'role'       => 'required|in:user,manager,admin',
         ]);
 
         // Create user WITHOUT password
@@ -46,7 +64,7 @@ class UserManagementController extends Controller
             'first_name' => $validated['first_name'],
             'last_name'  => $validated['last_name'],
             'email'      => $validated['email'],
-            'role'       => isset($validated['role']) ? 'admin' : 'user',
+            'role'       => $validated['role'],
             'password'   => '', // empty password
             'rfid_uid'   => null,
         ]);
@@ -70,7 +88,7 @@ class UserManagementController extends Controller
 
         return redirect()
             ->route('admin.user.management')
-            ->with('success', 'User created and invitation email sent.');
+            ->with('success', 'Benutzer erstellt und Einladungs-E-Mail gesendet.');
     }
 
         // Show edit form
@@ -86,7 +104,7 @@ class UserManagementController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
             'email'      => 'required|email|unique:users,email,' . $user->id,
-            'role'       => 'nullable|in:admin',
+            'role'       => 'required|in:user,manager,admin',
             'rfid_uid'   => 'nullable|string|max:255',
         ]);
 
@@ -94,17 +112,15 @@ class UserManagementController extends Controller
             'first_name' => $validated['first_name'],
             'last_name'  => $validated['last_name'],
             'email'      => $validated['email'],
-            'role'       => isset($validated['role']) ? 'admin' : 'user',
+            'role'       => $validated['role'],
             'rfid_uid'   => $validated['rfid_uid'] ?? null,
         ]);
-
-        $this->logAction(auth()->id, 'user_updated', "Updated user {$user->email}");
 
         if (Auth::check()) {
             $this->logAction(Auth::id(), 'user_updated', "Updated user {$user->email}");
         }
 
-        return redirect()->route('admin.user.management')->with('success', 'User updated successfully.');
+        return redirect()->route('admin.user.management')->with('success', 'Benutzer erfolgreich aktualisiert.');
     }
 
     // Delete user
@@ -114,7 +130,7 @@ class UserManagementController extends Controller
             $this->logAction(Auth::id(), 'user_deleted', "Deleted user {$user->email}");
         }
         $user->delete();
-        return redirect()->route('admin.user.management')->with('success', 'User deleted successfully.');
+        return redirect()->route('admin.user.management')->with('success', 'Benutzer erfolgreich gelöscht.');
     }
     
     public function sendPasswordLink(User $user)
@@ -134,7 +150,7 @@ class UserManagementController extends Controller
 
         return redirect()
             ->back()
-            ->with('success', 'Password setup link sent to user.');
+            ->with('success', 'Passwort-Link wurde an den Benutzer gesendet.');
     }
 
   public function export(Request $request)
@@ -143,7 +159,8 @@ class UserManagementController extends Controller
         $month = $request->get('month', now()->month);
         $year  = $request->get('year', now()->year);
 
-        $filename = "worklogs_{$user->id}_{$year}_{$month}.xlsx";
+                $monthPadded = str_pad((string) (int) $month, 2, '0', STR_PAD_LEFT);
+                $filename = "Arbeitszeiten_{$year}-{$monthPadded}.xlsx";
 
         return FacadesExcel::download(
             new UserWorklogsExport($user, $month, $year),

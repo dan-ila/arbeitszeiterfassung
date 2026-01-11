@@ -8,6 +8,10 @@ class Device extends Model
 {
     protected $table = 'devices';
 
-    protected $fillable = ['name', 'api_token'];
+    protected $fillable = ['name', 'api_token', 'enabled'];
+
+    protected $casts = [
+        'enabled' => 'boolean',
+    ];
 
 }

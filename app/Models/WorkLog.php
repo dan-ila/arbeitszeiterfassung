@@ -13,6 +13,7 @@ class WorkLog extends Model
         'user_id',
         'clock_in',
         'clock_out',
+        'source',
     ];
 
     protected $casts = [

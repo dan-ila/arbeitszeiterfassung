@@ -26,7 +26,8 @@ class AuthController extends Controller
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             return redirect()->route('login')
-                ->withErrors(['email' => 'Invalid credentials']);
+                ->withErrors(['email' => 'E-Mail oder Passwort ist falsch.'])
+                ->withInput($request->only('email'));
         }
 
         Auth::login($user);
@@ -78,7 +79,7 @@ class AuthController extends Controller
         );
 
         return $status === \Illuminate\Support\Facades\Password::PASSWORD_RESET
-            ? redirect()->route('login')->with('success', 'Password set successfully.')
-            : back()->withErrors(['email' => __($status)]);
+            ? redirect()->route('login')->with('success', 'Passwort wurde erfolgreich gesetzt.')
+            : back()->withErrors(['email' => __($status)])->withInput($request->only('email'));
     }
 }

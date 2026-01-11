@@ -8,6 +8,10 @@ use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\TwoFactorController;
 use App\Http\Controllers\VacationController;
+use App\Http\Controllers\WorkTimeRequestController;
+use App\Http\Controllers\AdminWorkTimeRequestController;
+use App\Http\Controllers\AdminVacationRequestController;
+use App\Http\Controllers\WebWorkLogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -60,6 +64,36 @@ Route::middleware(['auth', '2fa'])->group(function () {
     Route::get('/vacation', [VacationController::class, 'index'])->name('users.vacation');
     Route::get('/vacation/create', [VacationController::class, 'create'])->name('users.vacation.create');
     Route::post('/vacation', [VacationController::class, 'store'])->name('users.vacation.store');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Work logs (web/manual, user)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/worklogs/create', [WebWorkLogController::class, 'create'])
+        ->name('users.worklogs.create');
+
+    Route::post('/worklogs', [WebWorkLogController::class, 'store'])
+        ->name('users.worklogs.store');
+
+    Route::delete('/worklogs/{workLog}', [WebWorkLogController::class, 'destroy'])
+        ->name('users.worklogs.destroy');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Work time requests (user)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/worktime/requests/create', [WorkTimeRequestController::class, 'create'])
+        ->name('worktime.requests.create');
+
+    Route::get('/worktime/requests/{workLog}/edit', [WorkTimeRequestController::class, 'edit'])
+        ->name('worktime.requests.edit');
+
+    Route::post('/worktime/requests', [WorkTimeRequestController::class, 'store'])
+        ->name('worktime.requests.store');
 
 
     /*
@@ -117,8 +151,36 @@ Route::middleware(['auth', '2fa'])->group(function () {
         Route::put('/terminals/{terminal}', [TerminalController::class, 'update'])
             ->name('terminals.update');
 
+        Route::post('/terminals/{terminal}/enable', [TerminalController::class, 'enable'])
+            ->name('terminals.enable');
+
+        Route::post('/terminals/{terminal}/disable', [TerminalController::class, 'disable'])
+            ->name('terminals.disable');
+
         Route::delete('/terminals/{terminal}', [TerminalController::class, 'destroy'])
             ->name('terminals.destroy');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Requests (manager + admin)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('requests')->group(function () {
+        Route::get('/admin/worktime/requests', [AdminWorkTimeRequestController::class, 'index'])
+            ->name('admin.worktime.requests.index');
+
+        Route::post('/admin/worktime/requests/{workTimeRequest}/approve', [AdminWorkTimeRequestController::class, 'approve'])
+            ->name('admin.worktime.requests.approve');
+
+        Route::post('/admin/worktime/requests/{workTimeRequest}/reject', [AdminWorkTimeRequestController::class, 'reject'])
+            ->name('admin.worktime.requests.reject');
+
+        Route::post('/admin/vacation/requests/{vacation}/approve', [AdminVacationRequestController::class, 'approve'])
+            ->name('admin.vacation.requests.approve');
+
+        Route::post('/admin/vacation/requests/{vacation}/reject', [AdminVacationRequestController::class, 'reject'])
+            ->name('admin.vacation.requests.reject');
     });
 });
 

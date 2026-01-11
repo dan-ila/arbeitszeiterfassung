@@ -1,52 +1,65 @@
 @extends('master.app')
 
 @section('content')
-<div class="container mt-5">
+<div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-
-            <!-- Card wrapper -->
-            <div class="card shadow-sm">
-                <div class="card-header text-center" style="background-color: #005461; color: #F4F4F4;">
-                    <h4 class="mb-0">Set Your Password</h4>
+        <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5 col-xxl-4">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-secondary text-white text-center py-4">
+                    <h4 class="mb-1 fw-semibold">
+                        <i class="fa fa-lock me-2" aria-hidden="true"></i>
+                        Passwort festlegen
+                    </h4>
+                    <small class="opacity-75">Bitte wähle ein sicheres Passwort.</small>
                 </div>
 
-                <div class="card-body" style="background-color: #F4F4F4;">
-                    <!-- Error messages -->
-                    @if ($errors->any())
-                        <div class="alert" style="background-color: #018790; color: #F4F4F4;">
-                            <ul class="mb-0">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-
-                    <!-- Password form -->
-                    <form method="POST" action="{{ route('password.store') }}">
+                <div class="card-body p-4 p-md-5 bg-light">
+                    <form method="POST" action="{{ route('password.store') }}" class="mt-2">
                         @csrf
                         <input type="hidden" name="token" value="{{ $token }}">
                         <input type="hidden" name="email" value="{{ $email }}">
 
                         <div class="mb-3">
-                            <label class="form-label" style="color: #3B4953;">Password</label>
-                            <input type="password" class="form-control" name="password" required>
+                            <label for="password" class="form-label fw-semibold text-secondary">Passwort</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-white text-secondary" aria-hidden="true">
+                                    <i class="fa fa-key"></i>
+                                </span>
+                                <input
+                                    id="password"
+                                    type="password"
+                                    class="form-control"
+                                    name="password"
+                                    autocomplete="new-password"
+                                    required
+                                >
+                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label" style="color: #3B4953;">Confirm Password</label>
-                            <input type="password" class="form-control" name="password_confirmation" required>
+                        <div class="mb-4">
+                            <label for="password_confirmation" class="form-label fw-semibold text-secondary">Passwort bestätigen</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-white text-secondary" aria-hidden="true">
+                                    <i class="fa fa-check"></i>
+                                </span>
+                                <input
+                                    id="password_confirmation"
+                                    type="password"
+                                    class="form-control"
+                                    name="password_confirmation"
+                                    autocomplete="new-password"
+                                    required
+                                >
+                            </div>
                         </div>
 
-                        <button type="submit" class="btn w-100" style="background-color: #90AB8B; color: #F4F4F4;">
-                            Set Password
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fa fa-save me-2" aria-hidden="true"></i>
+                            Passwort speichern
                         </button>
                     </form>
-
                 </div>
             </div>
-
         </div>
     </div>
 </div>

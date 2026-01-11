@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\AdminNewVacationRequestMail;
 use App\Models\Vacation;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 
@@ -18,16 +21,25 @@ class VacationController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $year = now()->year;
+        $year = (int) request()->query('year', now()->year);
+        $status = request()->query('status');
+        if (!in_array($status, ['pending', 'approved', 'rejected'], true)) {
+            $status = null;
+        }
 
         // Get all vacations that overlap with the current year
-        $vacations = $user->vacations()
+        $vacationsQuery = $user->vacations()
             ->where(function ($query) use ($year) {
                 $query->whereYear('start_date', $year)
                       ->orWhereYear('end_date', $year);
             })
-            ->orderBy('start_date')
-            ->get();
+            ->orderBy('start_date');
+
+        if ($status) {
+            $vacationsQuery->where('status', $status);
+        }
+
+        $vacations = $vacationsQuery->get();
 
         // Define holidays for the current year
         $holidays = [
@@ -48,7 +60,7 @@ class VacationController extends Controller
 
         $remainingDays = $this->annualDays - $usedDays;
 
-        return view('users.vacation.index', compact('vacations', 'remainingDays', 'usedDays'));
+        return view('users.vacation.index', compact('vacations', 'remainingDays', 'usedDays', 'year', 'status'));
     }
 
     public function create()
@@ -79,16 +91,30 @@ class VacationController extends Controller
         $remainingDays = $this->annualDays - $usedDays;
 
         if ($requestedDays > $remainingDays) {
-            return back()->withErrors(['end_date' => 'Du hast nicht genug Urlaubstage.']);
+            return back()
+                ->withErrors(['end_date' => 'Du hast nicht genug Urlaubstage.'])
+                ->withInput();
         }
 
-        Vacation::create([
+        $vacation = Vacation::create([
             'user_id'    => $user->id,
             'start_date' => $start->format('Y-m-d'),
             'end_date'   => $end->format('Y-m-d'),
             'days'       => $requestedDays,
             'status'     => 'pending',
         ]);
+
+        $adminEmails = User::query()
+            ->where('role', 'admin')
+            ->pluck('email')
+            ->filter()
+            ->values()
+            ->all();
+
+        if (!empty($adminEmails)) {
+            $vacation->loadMissing('user');
+            Mail::to($adminEmails)->send(new AdminNewVacationRequestMail($vacation));
+        }
 
         return redirect()->route('users.vacation')
             ->with('success', "Urlaub beantragt ($requestedDays Tage).");

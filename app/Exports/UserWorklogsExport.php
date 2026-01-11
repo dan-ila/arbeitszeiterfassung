@@ -3,102 +3,62 @@
 namespace App\Exports;
 
 use App\Models\WorkLog;
-use App\Models\WorkBreak;
 use Carbon\Carbon;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
 use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
+use Maatwebsite\Excel\Concerns\WithProperties;
+use App\Exports\Sheets\MonthlyOverviewSheet;
+use App\Exports\Sheets\ShiftsSheet;
+use App\Exports\Sheets\BreaksSheet;
 
-class UserWorklogsExport implements FromCollection, WithHeadings, WithMapping
+class UserWorklogsExport implements WithMultipleSheets, WithProperties
 {
     protected $user;
     protected $month;
     protected $year;
-    protected $worklogs;
+
+    /** @var \Illuminate\Support\Collection<int,\App\Models\WorkLog> */
+    protected Collection $worklogs;
 
     public function __construct($user, $month, $year)
     {
         $this->user  = $user;
-        $this->month = $month;
-        $this->year  = $year;
+        $this->month = (int) $month;
+        $this->year  = (int) $year;
 
-        // Preload all worklogs for the month
         $start = Carbon::create($this->year, $this->month, 1)->startOfMonth();
         $end   = Carbon::create($this->year, $this->month, 1)->endOfMonth();
 
-        $this->worklogs = WorkLog::where('user_id', $this->user->id)
+        // Preload all worklogs + breaks for the month (supports multiple shifts per day)
+        $this->worklogs = WorkLog::query()
+            ->with(['workBreak' => function ($q) {
+                $q->whereNotNull('start_time')->whereNotNull('end_time');
+            }])
+            ->where('user_id', $this->user->id)
             ->whereBetween('clock_in', [$start, $end])
-            ->get()
-            ->keyBy(function($log) {
-                return Carbon::parse($log->clock_in)->format('Y-m-d');
-            });
+            ->orderBy('clock_in')
+            ->get();
     }
 
-    public function collection()
+    public function properties(): array
     {
-        $daysInMonth = Carbon::create($this->year, $this->month, 1)->daysInMonth;
-        $collection = new Collection();
+        $monthLabel = Carbon::create($this->year, $this->month, 1)->locale('de')->isoFormat('MMMM YYYY');
 
-        for ($day = 1; $day <= $daysInMonth; $day++) {
-            $dateObj = Carbon::create($this->year, $this->month, $day);
-            $dateStr = $dateObj->format('Y-m-d');
-            $weekday = ucfirst($dateObj->locale('de')->isoFormat('dddd'));
-
-            $log = $this->worklogs->get($dateStr);
-
-            $clockIn = $log ? Carbon::parse($log->clock_in)->format('H:i') : null;
-            $clockOut = $log && $log->clock_out ? Carbon::parse($log->clock_out)->format('H:i') : null;
-
-            // Break duration
-            $totalBreakMinutes = 0;
-            if ($log) {
-                $breaks = WorkBreak::where('work_log_id', $log->id)
-                    ->whereNotNull('start_time')
-                    ->whereNotNull('end_time')
-                    ->get();
-
-                foreach ($breaks as $break) {
-                    $totalBreakMinutes += Carbon::parse($break->end_time)
-                        ->diffInMinutes(Carbon::parse($break->start_time));
-                }
-            }
-
-            // Worked hours minus breaks
-            $workedHours = 0;
-            if ($log && $log->clock_out) {
-                $workedMinutes = Carbon::parse($log->clock_out)
-                    ->diffInMinutes(Carbon::parse($log->clock_in)) - $totalBreakMinutes;
-                $workedHours = round($workedMinutes / 60);
-            }
-
-            $collection->push([
-                'date'      => $dateObj->format('d.m.Y'),
-                'weekday'   => $weekday,
-                'clock_in'  => $clockIn ?? '-',
-                'clock_out' => $clockOut ?? '-',
-                'break'     => $totalBreakMinutes,
-                'worked'    => $workedHours,
-            ]);
-        }
-
-        return $collection;
+        return [
+            'title' => 'Arbeitszeiten Export',
+            'subject' => 'Arbeitszeiten',
+            'creator' => config('app.name'),
+            'company' => config('app.name'),
+            'description' => "Arbeitszeiten für {$this->user->first_name} {$this->user->last_name} ({$monthLabel})",
+        ];
     }
 
-    public function headings(): array
-    {
-        return ['Date', 'Weekday', 'Clock In', 'Clock Out', 'Break (min)', 'Worked Hours'];
-    }
-
-    public function map($row): array
+    public function sheets(): array
     {
         return [
-            $row['date'],
-            $row['weekday'],
-            $row['clock_in'],
-            $row['clock_out'],
-            $row['break'],
-            $row['worked'],
+            new MonthlyOverviewSheet($this->user, $this->month, $this->year, $this->worklogs),
+            new ShiftsSheet($this->user, $this->month, $this->year, $this->worklogs),
+            new BreaksSheet($this->user, $this->month, $this->year, $this->worklogs),
         ];
     }
 }

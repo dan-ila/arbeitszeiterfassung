@@ -34,7 +34,7 @@
                 <tr>
                     <td style="background:#018790; padding:20px; text-align:center;
                                font-size:12px; color:#F4F4F4;">
-                        © {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
+                        © {{ date('Y') }} {{ config('app.name') }}. Alle Rechte vorbehalten.
                     </td>
                 </tr>
 

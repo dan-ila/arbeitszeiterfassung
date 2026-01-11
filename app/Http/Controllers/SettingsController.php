@@ -65,6 +65,6 @@ class SettingsController extends Controller
 
         $user->save();
 
-        return redirect()->back()->with('success', 'Einstellungen erfolgreich gespeichert!');
+        return redirect()->route('users.settings')->with('success', 'Einstellungen erfolgreich gespeichert!');
     }
 }

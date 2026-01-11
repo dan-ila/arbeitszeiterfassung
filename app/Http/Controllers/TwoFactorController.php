@@ -22,7 +22,33 @@ class TwoFactorController extends Controller
     // Show 2FA challenge form
     public function challenge()
     {
-        return view('auth.2fa');
+        $user = Auth::user();
+
+        if (!$user || !$user->two_factor_enabled) {
+            request()->session()->put('2fa_passed', true);
+            return redirect()->route('users.dashboard');
+        }
+
+        // Ensure a secret exists (first-time setup)
+        if (!$user->two_factor_secret) {
+            $user->two_factor_secret = $this->google2fa->generateSecretKey();
+            $user->save();
+        }
+
+        $qrCodeUrl = $this->google2fa->getQRCodeUrl(
+            'MSC',
+            $user->email,
+            $user->two_factor_secret
+        );
+
+        $renderer = new ImageRenderer(
+            new RendererStyle(200),
+            new SvgImageBackEnd()
+        );
+        $writer = new Writer($renderer);
+        $qrCodeSvg = $writer->writeString($qrCodeUrl);
+
+        return view('auth.2fa', compact('qrCodeSvg'));
     }
 
     // Verify submitted 2FA code
@@ -33,6 +59,15 @@ class TwoFactorController extends Controller
         ]);
 
         $user = Auth::user();
+
+        if (!$user || !$user->two_factor_enabled) {
+            $request->session()->put('2fa_passed', true);
+            return redirect()->intended('/dashboard');
+        }
+
+        if (!$user->two_factor_secret) {
+            return redirect()->route('2fa.challenge');
+        }
 
         $valid = $this->google2fa->verifyKey($user->two_factor_secret, $request->one_time_password);
 
@@ -56,7 +91,11 @@ class TwoFactorController extends Controller
         }
 
         // Create the otpauth URL
-        $google2fa_url = "otpauth://totp/MSC:{$user->email}?secret={$user->two_factor_secret}&issuer=MSC";
+        $google2fa_url = $google2fa->getQRCodeUrl(
+            'MSC',
+            $user->email,
+            $user->two_factor_secret
+        );
 
         // Generate QR code as SVG
         $renderer = new ImageRenderer(
@@ -66,7 +105,7 @@ class TwoFactorController extends Controller
         $writer = new Writer($renderer);
         $qrCodeSvg = $writer->writeString($google2fa_url);
 
-        return view('users.2fa-setup', compact('qrCodeSvg', 'user'));
+        return view('users.2fa.setup', compact('qrCodeSvg', 'user'));
     }
 
     public function enable(Request $request)
@@ -83,6 +122,9 @@ class TwoFactorController extends Controller
         if ($valid) {
             $user->two_factor_enabled = true;
             $user->save();
+
+            // OTP was verified during enable, so consider this session verified.
+            $request->session()->put('2fa_passed', true);
 
             return redirect()->route('users.dashboard')
                 ->with('success', '2FA erfolgreich aktiviert!');

@@ -23,6 +23,10 @@ class EnsureDeviceIsRegistered
             return response()->json(['message' => 'Unauthorized device'], 401);
         }
 
+        if ($device->getAttribute('enabled') === false) {
+            return response()->json(['message' => 'Device disabled'], 403);
+        }
+
         $request->attributes->set('device', $device);
 
         return $next($request);
